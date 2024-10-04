@@ -6,6 +6,7 @@ import numpy
 import pytest
 from numba import cuda
 import cuda.parallel.experimental as cudax
+import cuda.parallel.experimental.itertools as cudax_itertools
 
 
 def random_int(shape, dtype):
@@ -83,3 +84,7 @@ def test_device_reduce_dtype_mismatch():
     for ix in range(3):
         with pytest.raises(TypeError, match=r"^dtype mismatch: __init__=int32, __call__=int64$"):
           reduce_into(None, d_inputs[int(ix == 0)], d_outputs[int(ix == 1)], h_inits[int(ix == 2)])
+
+
+def test_itertools_count():
+    assert cudax_itertools.count is not None
