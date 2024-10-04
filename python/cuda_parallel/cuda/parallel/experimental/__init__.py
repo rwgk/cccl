@@ -12,7 +12,9 @@ from numba import cuda, types
 from numba.cuda.cudadrv import enums
 
 
-# Should match C++
+# TODO Extract c/include/cccl/c/types.h ctypes bindings into reusable module
+
+# MUST match `cccl_type_enum` in c/include/cccl/c/types.h
 class _TypeEnum(ctypes.c_int):
     INT8 = 0
     INT16 = 1
@@ -27,13 +29,13 @@ class _TypeEnum(ctypes.c_int):
     STORAGE = 10
 
 
-# Should match C++
+# MUST match `cccl_op_kind_t` in c/include/cccl/c/types.h
 class _CCCLOpKindEnum(ctypes.c_int):
     STATELESS = 0
     STATEFUL = 1
 
 
-# Should match C++
+# MUST match `cccl_iterator_kind_t` in c/include/cccl/c/types.h
 class _CCCLIteratorKindEnum(ctypes.c_int):
     POINTER = 0
     ITERATOR = 1
@@ -57,13 +59,14 @@ def _type_to_enum(numba_type):
     return _TypeEnum.STORAGE
 
 
-# TODO Extract into reusable module
+# MUST match `cccl_type_info` in c/include/cccl/c/types.h
 class _TypeInfo(ctypes.Structure):
     _fields_ = [("size", ctypes.c_int),
                 ("alignment", ctypes.c_int),
                 ("type", _TypeEnum)]
 
 
+# MUST match `cccl_op_t` in c/include/cccl/c/types.h
 class _CCCLOp(ctypes.Structure):
     _fields_ = [("type", _CCCLOpKindEnum),
                 ("name", ctypes.c_char_p),
@@ -74,6 +77,7 @@ class _CCCLOp(ctypes.Structure):
                 ("state", ctypes.c_void_p)]
 
 
+# MUST match `cccl_iterator_t` in c/include/cccl/c/types.h
 class _CCCLIterator(ctypes.Structure):
     _fields_ = [("size", ctypes.c_int),
                 ("alignment", ctypes.c_int),
@@ -84,6 +88,7 @@ class _CCCLIterator(ctypes.Structure):
                 ("state", ctypes.c_void_p)]
 
 
+# MUST match `cccl_value_t` in c/include/cccl/c/types.h
 class _CCCLValue(ctypes.Structure):
     _fields_ = [("type", _TypeInfo),
                 ("state", ctypes.c_void_p)]
@@ -174,6 +179,7 @@ def _get_paths():
     return _paths
 
 
+# MUST match `cccl_device_reduce_build_result_t` in c/include/cccl/c/reduce.h
 class _CCCLDeviceReduceBuildResult(ctypes.Structure):
     _fields_ = [("cc", ctypes.c_int),
                 ("cubin", ctypes.c_void_p),
