@@ -88,3 +88,27 @@ def test_device_reduce_dtype_mismatch():
 
 def test_itertools_count():
     assert cudax_itertools.count is not None
+
+
+def test_device_sum_repeat_1_equals_num_items(num_items=10):
+    def add_op(a, b):
+        return a + b
+
+    dtype = numpy.int32
+
+    h_input = numpy.array([1] * num_items, dtype)
+    d_input = cuda.to_device(h_input) # cudax_itertools.repeat(1) -> thrust::constant_iterator
+
+    d_output = cuda.device_array(1, dtype) # to store device sum
+
+    h_init = numpy.array([0], dtype) # start device sum with 0
+
+    reduce_into = cudax.reduce_into(d_in=d_output, d_out=d_output, op=add_op, init=h_init)
+
+    temp_storage_size = reduce_into(None, d_in=d_input, d_out=d_output, init=h_init)
+    d_temp_storage = cuda.device_array(temp_storage_size, dtype=numpy.uint8)
+
+    reduce_into(d_temp_storage, d_input, d_output, h_init)
+
+    h_output = d_output.copy_to_host()
+    assert h_output[0] == num_items
