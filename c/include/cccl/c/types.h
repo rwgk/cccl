@@ -79,5 +79,5 @@ struct cccl_iterator_t
   cccl_op_t advance;
   cccl_op_t dereference;
   cccl_type_info value_type;
-  void* state;
+  void* ZZ_state;
 };

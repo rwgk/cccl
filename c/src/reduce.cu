@@ -254,9 +254,9 @@ cudaError_t InvokeSingleTile(
     nothing_t nothing{};
     TransformOpT transform_op{};
     void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.state;
-    void* in_ptr   = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.state : d_in.state;
-    void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.state : d_out.state;
-    void* args[]   = {in_ptr, out_ptr, &num_items, op_state, init.state, &transform_op};
+    void* ZZ_in_ptr   = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.ZZ_state : d_in.ZZ_state;
+    void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.ZZ_state : d_out.ZZ_state;
+    void* args[]   = {ZZ_in_ptr, out_ptr, &num_items, op_state, init.state, &transform_op};
 
     check(cuLaunchKernel((CUfunction) single_tile_kernel, 1, 1, 1, policy.block_size, 1, 1, 0, stream, args, 0));
 
@@ -291,8 +291,8 @@ cudaError_t InvokePasses(
   cudaError error = cudaSuccess;
   do
   {
-    void* in_ptr  = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.state : d_in.state;
-    void* out_ptr = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.state : d_out.state;
+    void* ZZ_in_ptr  = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.ZZ_state : d_in.ZZ_state;
+    void* out_ptr = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.ZZ_state : d_out.ZZ_state;
 
     // Get SM count
     int sm_count;
@@ -348,7 +348,7 @@ cudaError_t InvokePasses(
     void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.state;
 
     TransformOpT transform_op{};
-    void* reduce_args[] = {in_ptr, &allocations[0], &num_items, &even_share, op_state, &transform_op};
+    void* reduce_args[] = {ZZ_in_ptr, &allocations[0], &num_items, &even_share, op_state, &transform_op};
 
     check(cuLaunchKernel(
       (CUfunction) reduce_kernel, reduce_grid_size, 1, 1, policy.block_size, 1, 1, 0, stream, reduce_args, 0));
