@@ -556,6 +556,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
     const std::string input_it_value_t = cccl_type_enum_to_string(input_it.value_type.type);
     const std::string offset_t         = cccl_type_enum_to_string(cccl_type_enum::UINT64);
 
+    // HOW TO USE thrust::constant_iterator HERE?
     const std::string input_iterator_src =
       input_it.type == cccl_iterator_kind_t::pointer
         ? std::string{}

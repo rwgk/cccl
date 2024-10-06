@@ -132,6 +132,36 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   REQUIRE(output == expected);
 }
 
+template <class T>
+struct constant_iterator_state_t
+{
+  T value;
+};
+
+TEST_CASE("reduce constant_iterator", "[reduce]")
+{
+  const std::size_t num_items                         = 3;
+  operation_t op                                      = make_operation("op", get_op(get_type_info<int>().type));
+  iterator_t<int, constant_iterator_state_t<int>> input_it = make_iterator<int, constant_iterator_state_t<int>>(
+    "struct constant_iterator_state_t { int value; };\n",
+    {"no_advance",
+     "extern \"C\" __device__ void no_advance(constant_iterator_state_t* state, unsigned long long) {\n"
+     "}"},
+    {"constant_dereference",
+     "extern \"C\" __device__ int constant_dereference(constant_iterator_state_t* state) { \n"
+     "  return state->value;\n"
+     "}"});
+  input_it.state.value = 10;
+  pointer_t<int> output_it(1);
+  value_t<int> init{42};
+
+  reduce(input_it, output_it, num_items, op, init);
+
+  const int output   = output_it[0];
+  const int expected = init.value + num_items * input_it.state.value;
+  REQUIRE(output == expected);
+}
+
 struct transform_output_iterator_state_t
 {
   int* d_output;
@@ -163,12 +193,6 @@ TEST_CASE("Reduce works with output iterators", "[reduce]")
   const int expected = std::accumulate(input.begin(), input.end(), init.value);
   REQUIRE(output == expected * 2);
 }
-
-template <class T>
-struct constant_iterator_state_t
-{
-  T value;
-};
 
 TEST_CASE("Reduce works with input and output iterators", "[reduce]")
 {
