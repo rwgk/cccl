@@ -255,9 +255,11 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     nothing_t nothing{};
     TransformOpT transform_op{};
     void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.state;
+#ifdef JUNK
     if (d_in.type == cccl_iterator_kind_t::iterator) {
       throw std::runtime_error("NOT IMPLEMENTED");
     }
+#endif
     void* ZZ_in_ptr   = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.ZZ_state : d_in.ZZ_state;
     void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.ZZ_state : d_out.ZZ_state;
     void* args[]   = {ZZ_in_ptr, out_ptr, &num_items, op_state, init.state, &transform_op};
@@ -536,7 +538,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
   int cc_major,
   int cc_minor,
   const char* cub_path,
-  const char* thrust_path,
+  const char* /*thrust_path*/,
   const char* libcudacxx_path,
   const char* ctk_path) noexcept
 {
@@ -707,8 +709,8 @@ fflush(stderr); printf("\nLOOOK single_tile_second_kernel_name='%s'  %s:%d\n", s
 
     const std::string arch = std::format("-arch=sm_{0}{1}", cc_major, cc_minor);
 
-    constexpr int num_args     = 7;
-    const char* args[num_args] = {arch.c_str(), cub_path, thrust_path, libcudacxx_path, ctk_path, "-rdc=true", "-dlto"};
+    constexpr int num_args     = 6;
+    const char* args[num_args] = {arch.c_str(), cub_path, /*thrust_path,*/ libcudacxx_path, ctk_path, "-rdc=true", "-dlto"};
 
     std::size_t log_size{};
     nvrtcResult compile_result = nvrtcCompileProgram(prog, num_args, args);
