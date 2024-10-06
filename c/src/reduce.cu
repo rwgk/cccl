@@ -782,7 +782,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
     check(nvJitLinkDestroy(&handle));
 
     cuLibraryLoadData(&build->library, cubin.get(), nullptr, nullptr, 0, nullptr, nullptr, 0);
-    check(cuLibraryGetKernel(&build->single_tile_kernel, build->library, single_tile_kernel_lowered_name_ptr.get()));
+    check(cuLibraryGetKernel(&build->ZZ_single_tile_kernel, build->library, single_tile_kernel_lowered_name_ptr.get()));
     check(cuLibraryGetKernel(
       &build->single_tile_second_kernel, build->library, single_tile_second_kernel_lowered_name_ptr.get()));
     check(cuLibraryGetKernel(&build->reduction_kernel, build->library, reduction_kernel_lowered_name_ptr.get()));
@@ -829,7 +829,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
       op,
       init,
       build.cc,
-      build.single_tile_kernel,
+      build.ZZ_single_tile_kernel,
       build.single_tile_second_kernel,
       build.reduction_kernel,
       cu_device,

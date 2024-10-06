@@ -24,7 +24,7 @@ struct cccl_device_reduce_build_result_t
   void* cubin;
   size_t cubin_size;
   CUlibrary library;
-  CUkernel single_tile_kernel;
+  CUkernel ZZ_single_tile_kernel;
   CUkernel single_tile_second_kernel;
   CUkernel reduction_kernel;
 };
