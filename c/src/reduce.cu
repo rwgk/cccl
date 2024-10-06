@@ -695,9 +695,11 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
     check(nvrtcCreateProgram(&prog, src.c_str(), name, 0, nullptr, nullptr));
 
     std::string single_tile_kernel_name = get_single_tile_kernel_name(input_it, output_it, op, init, false);
+fflush(stderr); printf("\nLOOOK single_tile_kernel_name='%s'  %s:%d\n", single_tile_kernel_name.c_str(), __FILE__, __LINE__); fflush(stdout);
     check(nvrtcAddNameExpression(prog, single_tile_kernel_name.c_str()));
 
     std::string single_tile_second_kernel_name = get_single_tile_kernel_name(input_it, output_it, op, init, true);
+fflush(stderr); printf("\nLOOOK single_tile_second_kernel_name='%s'  %s:%d\n", single_tile_kernel_name.c_str(), __FILE__, __LINE__); fflush(stdout);
     check(nvrtcAddNameExpression(prog, single_tile_second_kernel_name.c_str()));
 
     std::string reduction_kernel_name = get_device_reduce_kernel_name(op, input_it, init);
@@ -782,6 +784,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
     check(nvJitLinkDestroy(&handle));
 
     cuLibraryLoadData(&build->library, cubin.get(), nullptr, nullptr, 0, nullptr, nullptr, 0);
+fflush(stderr); printf("\nLOOOK %s  %s:%d\n", single_tile_kernel_lowered_name_ptr.get(), __FILE__, __LINE__); fflush(stdout);
     check(cuLibraryGetKernel(&build->ZZ_single_tile_kernel, build->library, single_tile_kernel_lowered_name_ptr.get()));
     check(cuLibraryGetKernel(
       &build->single_tile_second_kernel, build->library, single_tile_second_kernel_lowered_name_ptr.get()));
