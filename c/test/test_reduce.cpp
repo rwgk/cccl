@@ -104,8 +104,9 @@ struct counting_iterator_state_t
   int value;
 };
 
-TEST_CASE("Reduce works with input iterators", "[reduce]")
+TEST_CASE("ZZ Reduce works with input iterators", "[reduce]")
 {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   const std::size_t num_items                         = GENERATE(1, 42, take(4, random(1 << 12, 1 << 16)));
   operation_t op                                      = make_operation("op", get_op(get_type_info<int>().type));
   iterator_t<int, counting_iterator_state_t> input_it = make_iterator<int, counting_iterator_state_t>(
@@ -122,7 +123,9 @@ TEST_CASE("Reduce works with input iterators", "[reduce]")
   pointer_t<int> output_it(1);
   value_t<int> init{42};
 
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   reduce(input_it, output_it, num_items, op, init);
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
 
   const int output   = output_it[0];
   const int expected = init.value + num_items * (num_items - 1) / 2;

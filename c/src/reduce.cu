@@ -240,6 +240,7 @@ cudaError_t InvokeSingleTile(
   CUkernel single_tile_kernel,
   CUstream stream)
 {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   const runtime_tuning_policy policy = get_policy(cc, d_in.value_type, d_in.value_type);
 
   cudaError error = cudaSuccess;
@@ -254,6 +255,9 @@ cudaError_t InvokeSingleTile(
     nothing_t nothing{};
     TransformOpT transform_op{};
     void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.state;
+    if (d_in.type == cccl_iterator_kind_t::iterator) {
+      throw std::runtime_error("NOT IMPLEMENTED");
+    }
     void* ZZ_in_ptr   = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.ZZ_state : d_in.ZZ_state;
     void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.ZZ_state : d_out.ZZ_state;
     void* args[]   = {ZZ_in_ptr, out_ptr, &num_items, op_state, init.state, &transform_op};
@@ -285,6 +289,7 @@ cudaError_t InvokePasses(
   CUdevice device,
   CUstream stream)
 {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   const cccl_type_info accum_t       = get_accumulator_type(op, d_in, init);
   const runtime_tuning_policy policy = get_policy(cc, accum_t, d_in.value_type);
 
@@ -789,6 +794,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
   catch (...)
   {
     error = CUDA_ERROR_UNKNOWN;
+fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) error, __FILE__, __LINE__); fflush(stdout);
   }
 
   return error;
@@ -832,6 +838,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
   catch (...)
   {
     error = CUDA_ERROR_UNKNOWN;
+fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) error, __FILE__, __LINE__); fflush(stdout);
   }
 
   if (pushed)
@@ -857,6 +864,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_cleanup(cccl_device_reduce_bui
   }
   catch (...)
   {
+fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) CUDA_ERROR_UNKNOWN, __FILE__, __LINE__); fflush(stdout);
     return CUDA_ERROR_UNKNOWN;
   }
 
