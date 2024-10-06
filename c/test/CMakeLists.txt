@@ -4,6 +4,6 @@ target_link_libraries(cccl.c.test.reduce PRIVATE cccl.c CUDA::cudart CUDA::nvrtc
 
 target_compile_definitions(cccl.c.test.reduce PRIVATE CCCL_C_EXPERIMENTAL
                                                      TEST_CUB_PATH="-I${CCCL_SOURCE_DIR}/cub"
-                                                     TEST_THRUST_PATH="-I${CCCL_SOURCE_DIR}/cub"
+                                                     TEST_THRUST_PATH="-I${CCCL_SOURCE_DIR}/thrust"
                                                      TEST_LIBCUDACXX_PATH="-I${CCCL_SOURCE_DIR}/libcudacxx/include"
                                                      TEST_CTK_PATH="-I${CUDAToolkit_INCLUDE_DIRS}")

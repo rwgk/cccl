@@ -538,7 +538,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
   int cc_major,
   int cc_minor,
   const char* cub_path,
-  const char* /*thrust_path*/,
+  const char* thrust_path,
   const char* libcudacxx_path,
   const char* ctk_path) noexcept
 {
@@ -666,6 +666,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
     const std::string src = std::format(
       "#include <cub/block/block_reduce.cuh>\n"
       "#include <cub/device/dispatch/kernels/reduce.cuh>\n"
+      /* "#include <thrust/iterator/constant_iterator.h>\n" */
       "struct __align__({1}) storage_t {{\n"
       "  char data[{0}];\n"
       "}};\n"
@@ -709,8 +710,10 @@ fflush(stderr); printf("\nLOOOK single_tile_second_kernel_name='%s'  %s:%d\n", s
 
     const std::string arch = std::format("-arch=sm_{0}{1}", cc_major, cc_minor);
 
-    constexpr int num_args     = 6;
-    const char* args[num_args] = {arch.c_str(), cub_path, /*thrust_path,*/ libcudacxx_path, ctk_path, "-rdc=true", "-dlto"};
+    constexpr int num_args     = 7;
+fflush(stderr); printf("\nLOOOK cub_path='%s'  %s:%d\n", cub_path, __FILE__, __LINE__); fflush(stdout);
+fflush(stderr); printf("\nLOOOK thrust_path='%s'  %s:%d\n", thrust_path, __FILE__, __LINE__); fflush(stdout);
+    const char* args[num_args] = {arch.c_str(), cub_path, thrust_path, libcudacxx_path, ctk_path, "-rdc=true", "-dlto"};
 
     std::size_t log_size{};
     nvrtcResult compile_result = nvrtcCompileProgram(prog, num_args, args);
