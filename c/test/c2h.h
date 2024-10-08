@@ -281,7 +281,7 @@ struct stateful_operation_t
     op.type       = cccl_op_kind_t::stateful;
     op.size       = sizeof(OpT);
     op.alignment  = alignof(OpT);
-    op.state      = &op_state;
+    op.OP_state      = &op_state;
     op.name       = name.c_str();
     op.ltoir      = code.c_str();
     op.ltoir_size = code.size();

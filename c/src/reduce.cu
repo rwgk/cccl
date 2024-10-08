@@ -110,7 +110,7 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
 
     nothing_t nothing{};
     TransformOpT transform_op{};
-    void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.state;
+    void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.OP_state;
 #ifdef JUNK
     if (d_in.type == cccl_iterator_kind_t::iterator) {
       throw std::runtime_error("NOT IMPLEMENTED");
@@ -208,7 +208,7 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     //    d_in, d_block_reductions, num_items, even_share, ReductionOpT{}, TransformOpT{});
 
     nothing_t nothing{};
-    void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.state;
+    void* op_state = op.type == cccl_op_kind_t::stateless ? &nothing : op.OP_state;
 
     TransformOpT transform_op{};
     void* reduce_args[] = {ZZ_in_ptr, &allocations[0], &num_items, &even_share, op_state, &transform_op};

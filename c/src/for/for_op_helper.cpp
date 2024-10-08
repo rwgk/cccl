@@ -227,7 +227,7 @@ for_each_kernel_state make_for_kernel_state(cccl_op_t op, cccl_iterator_t iterat
   if (cccl_op_kind_t::stateful == op.type)
   {
     char* user_start = iter_start + user_op_offset;
-    memcpy(user_start, op.state, user_size);
+    memcpy(user_start, op.OP_state, user_size);
   }
 
   // Return either local buffer or unique_ptr

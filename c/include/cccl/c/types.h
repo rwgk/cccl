@@ -56,7 +56,7 @@ struct cccl_op_t
   int ltoir_size;
   int size;
   int alignment;
-  void* state;
+  void* OP_state;
 };
 
 enum class cccl_iterator_kind_t
