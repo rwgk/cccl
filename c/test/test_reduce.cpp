@@ -141,7 +141,7 @@ struct constant_iterator_state_t
 TEST_CASE("reduce constant_iterator", "[reduce]")
 {
   const std::size_t num_items                         = 3;
-  operation_t op                                      = make_operation("op", get_op(get_type_info<int>().type));
+  operation_t op                                      = make_operation("op", get_reduce_op(get_type_info<int>().type));
   iterator_t<int, constant_iterator_state_t<int>> input_it = make_iterator<int, constant_iterator_state_t<int>>(
     "struct constant_iterator_state_t { int value; };\n",
     {"no_advance",
