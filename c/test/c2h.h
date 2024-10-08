@@ -239,7 +239,7 @@ struct pointer_t
     it.size       = sizeof(T);
     it.alignment  = alignof(T);
     it.type       = cccl_iterator_kind_t::pointer;
-    it.ZZ_state      = ptr;
+    it.IT_state      = ptr;
     it.value_type = get_type_info<T>();
     return it;
   }
@@ -316,7 +316,7 @@ struct iterator_t
     it.advance     = advance;
     it.dereference = dereference;
     it.value_type  = get_type_info<ValueT>();
-    it.ZZ_state       = &state;
+    it.IT_state       = &state;
     return it;
   }
 };

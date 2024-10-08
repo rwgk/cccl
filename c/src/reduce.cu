@@ -116,8 +116,8 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
       throw std::runtime_error("NOT IMPLEMENTED");
     }
 #endif
-    void* ZZ_in_ptr   = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.ZZ_state : d_in.ZZ_state;
-    void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.ZZ_state : d_out.ZZ_state;
+    void* ZZ_in_ptr   = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.IT_state : d_in.IT_state;
+    void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.IT_state : d_out.IT_state;
     void* args[]   = {ZZ_in_ptr, out_ptr, &num_items, op_state, init.state, &transform_op};
 
     check(cuLaunchKernel((CUfunction) single_tile_kernel, 1, 1, 1, policy.block_size, 1, 1, 0, stream, args, 0));
@@ -154,8 +154,8 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   cudaError error = cudaSuccess;
   do
   {
-    void* ZZ_in_ptr  = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.ZZ_state : d_in.ZZ_state;
-    void* out_ptr = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.ZZ_state : d_out.ZZ_state;
+    void* ZZ_in_ptr  = d_in.type == cccl_iterator_kind_t::pointer ? &d_in.IT_state : d_in.IT_state;
+    void* out_ptr = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.IT_state : d_out.IT_state;
 
     // Get SM count
     int sm_count;
