@@ -86,8 +86,26 @@ def test_device_reduce_dtype_mismatch():
           reduce_into(None, d_inputs[int(ix == 0)], d_outputs[int(ix == 1)], h_inits[int(ix == 2)])
 
 
+def test_itertools_repeat():
+    it = cudax_itertools.repeat(23)
+    assert it.dereference() == 23
+    assert it.advance(0) is None
+    assert it.dereference() == 23
+    assert it.advance(1) is None
+    assert it.dereference() == 23
+    assert it.advance(5) is None
+    assert it.dereference() == 23
+
+
 def test_itertools_count():
-    assert cudax_itertools.count is not None
+    it = cudax_itertools.count(31)
+    assert it.dereference() == 31
+    assert it.advance(0) is None
+    assert it.dereference() == 31
+    assert it.advance(1) is None
+    assert it.dereference() == 32
+    assert it.advance(5) is None
+    assert it.dereference() == 37
 
 
 def test_device_sum_repeat_1_equals_num_items(num_items=10):

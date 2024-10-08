@@ -104,9 +104,12 @@ def _type_to_info(numpy_type):
 
 
 def _device_array_to_pointer(array):
-    dtype = array.dtype
-    info = _type_to_info(dtype)
-    return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.POINTER, _CCCLOp(), _CCCLOp(), info, array.device_ctypes_pointer.value)
+    dtype = getattr(array, "dtype", None)
+    if dtype is not None:
+        info = _type_to_info(dtype)
+        return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.POINTER, _CCCLOp(), _CCCLOp(), info, array.device_ctypes_pointer.value)
+    else:
+        return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.ITERATOR, _CCCLOp(), _CCCLOp(), _TypeInfo(), 0)
 
 
 def _host_array_to_value(array):
