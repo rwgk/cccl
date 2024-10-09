@@ -32,6 +32,170 @@ using TransformOpT = ::cuda::std::__identity;
 using OffsetT      = unsigned long long;
 static_assert(std::is_same_v<cub::detail::choose_offset_t<OffsetT>, OffsetT>, "OffsetT must be size_t");
 
+namespace c2h_lifted {
+
+static std::string compile(const std::string& source)
+{
+  // compile source to LTO-IR using nvrtc
+
+  nvrtcProgram prog;
+  check(nvrtcCreateProgram(&prog, source.c_str(), "op.cu", 0, nullptr, nullptr));
+
+  const char* options[] = {"--std=c++17", "-rdc=true", "-dlto"};
+
+  check(nvrtcCompileProgram(prog, 3, options));
+  std::size_t ltoir_size{};
+  check(nvrtcGetLTOIRSize(prog, &ltoir_size));
+
+  std::unique_ptr<char[]> ltoir(new char[ltoir_size]);
+
+  check(nvrtcGetLTOIR(prog, ltoir.get()));
+  check(nvrtcDestroyProgram(&prog));
+
+fflush(stderr); printf("\nLOOOK COMPILE RETURN %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+  return std::string(ltoir.release(), ltoir_size);
+}
+
+template <class T>
+cccl_type_info get_type_info()
+{
+  cccl_type_info info;
+  info.size      = sizeof(T);
+  info.alignment = alignof(T);
+
+  if constexpr (std::is_same_v<T, char>)
+  {
+    info.type = cccl_type_enum::INT8;
+  }
+  else if constexpr (std::is_same_v<T, int32_t>)
+  {
+    info.type = cccl_type_enum::INT32;
+  }
+  else if constexpr (std::is_same_v<T, uint32_t>)
+  {
+    info.type = cccl_type_enum::UINT32;
+  }
+  else if constexpr (std::is_same_v<T, int64_t>)
+  {
+    info.type = cccl_type_enum::INT64;
+  }
+  else if constexpr (std::is_same_v<T, uint64_t>)
+  {
+    info.type = cccl_type_enum::UINT64;
+  }
+  else if constexpr (!std::is_integral_v<T>)
+  {
+    info.type = cccl_type_enum::STORAGE;
+  }
+  else
+  {
+    //static_assert(false, "Unsupported type");
+    throw std::runtime_error("Unsupported type");
+  }
+
+  return info;
+}
+
+struct operation_t
+{
+  std::string name;
+  std::string code;
+
+  operator cccl_op_t()
+  {
+    cccl_op_t op;
+    op.type       = cccl_op_kind_t::stateless;
+    op.name       = name.c_str();
+    op.ltoir      = code.c_str();
+    op.ltoir_size = code.size();
+    return op;
+  }
+};
+
+template <class OpT>
+struct stateful_operation_t
+{
+  OpT op_state;
+  std::string name;
+  std::string code;
+
+  operator cccl_op_t()
+  {
+    cccl_op_t op;
+    op.type       = cccl_op_kind_t::stateful;
+    op.size       = sizeof(OpT);
+    op.alignment  = alignof(OpT);
+    op.OP_state      = &op_state;
+    op.name       = name.c_str();
+    op.ltoir      = code.c_str();
+    op.ltoir_size = code.size();
+    return op;
+  }
+};
+
+static operation_t make_operation(std::string name, std::string code)
+{
+  return operation_t{name, compile(code)};
+}
+
+template <class OpT>
+static stateful_operation_t<OpT> make_operation(std::string name, std::string code, OpT op)
+{
+  return {op, name, compile(code)};
+}
+
+template <class ValueT, class StateT>
+struct iterator_t
+{
+  StateT state;
+  operation_t advance;
+  operation_t dereference;
+
+  operator cccl_iterator_t()
+  {
+    cccl_iterator_t it;
+    it.size        = sizeof(StateT);
+    it.alignment   = alignof(StateT);
+    it.type        = cccl_iterator_kind_t::iterator;
+    it.advance     = advance;
+    it.dereference = dereference;
+    it.value_type  = get_type_info<ValueT>();
+    it.IT_state       = &state;
+    return it;
+  }
+};
+
+template <class ValueT, class StateT>
+iterator_t<ValueT, StateT> make_iterator(std::string state, operation_t advance, operation_t dereference)
+{
+  iterator_t<ValueT, StateT> it;
+  it.advance     = make_operation(advance.name, state + advance.code);
+  it.dereference = make_operation(dereference.name, state + dereference.code);
+  return it;
+}
+
+} // namespace c2h_lifted
+
+template <class T>
+struct constant_iterator_state_t
+{
+  T value;
+};
+
+static cccl_iterator_t make_repeat(int32_t value) {
+  c2h_lifted::iterator_t<int32_t, constant_iterator_state_t<int>> input_it = c2h_lifted::make_iterator<int32_t, constant_iterator_state_t<int32_t>>(
+    "struct constant_iterator_state_t { int value; };\n",
+    {"no_advance",
+     "extern \"C\" __device__ void no_advance(constant_iterator_state_t* state, unsigned long long) {\n"
+     "}"},
+    {"constant_dereference",
+     "extern \"C\" __device__ int constant_dereference(constant_iterator_state_t* state) { \n"
+     "  return state->value;\n"
+     "}"});
+  input_it.state.value = value;
+  return input_it;
+}
+
 struct nothing_t
 {};
 
@@ -120,7 +284,9 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     void* out_ptr  = d_out.type == cccl_iterator_kind_t::pointer ? &d_out.IT_state : d_out.IT_state;
     void* args[]   = {ZZ_in_ptr, out_ptr, &num_items, op_state, init.state, &transform_op};
 
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     check(cuLaunchKernel((CUfunction) single_tile_kernel, 1, 1, 1, policy.block_size, 1, 1, 0, stream, args, 0));
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
 
     // Check for failure to launch
     error = CubDebug(cudaPeekAtLastError());
@@ -257,18 +423,23 @@ static cudaError_t Invoke(
   CUdevice device,
   CUstream stream)
 {
-  const cccl_type_info accum_t = get_accumulator_type(op, d_in, init);
-  runtime_tuning_policy policy = get_policy(cc, accum_t, d_in.value_type);
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+  const cccl_type_info accum_t = get_accumulator_type(op, d_in, init); // ONLY USED init
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+  runtime_tuning_policy policy = get_policy(cc, accum_t, d_in.value_type); // DOES NOT USE d_in.value_type
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
 
   // Force kernel code-generation in all compiler passes
   if (num_items <= (policy.block_size * policy.items_per_thread))
   {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     // Small, single tile size
     return InvokeSingleTile(
       d_temp_storage, temp_storage_bytes, d_in, d_out, num_items, op, init, cc, single_tile_kernel, stream);
   }
   else
   {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     // Multi-tile pass
     return InvokePasses(
       d_temp_storage,
@@ -383,6 +554,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
   const char* libcudacxx_path,
   const char* ctk_path) noexcept
 {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   CUresult error = CUDA_SUCCESS;
 
   try
@@ -644,7 +816,7 @@ fflush(stderr); printf("\nLOOOK %s  %s:%d\n", single_tile_kernel_lowered_name_pt
   catch (...)
   {
     error = CUDA_ERROR_UNKNOWN;
-fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) error, __FILE__, __LINE__); fflush(stdout);
+fflush(stderr); printf("\nLOOOK CATCH error=%ld  %s:%d\n", (long) error, __FILE__, __LINE__); fflush(stdout);
   }
 
   return error;
@@ -661,6 +833,11 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
   cccl_value_t init,
   CUstream stream) noexcept
 {
+fflush(stderr); printf("\nLOOOK cccl_device_reduce ENTRY %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+  if (d_in.IT_state == nullptr) {
+fflush(stderr); printf("\nLOOOK cccl_device_reduce IT_state nullptr %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+      d_in = make_repeat(1); // XXX
+  }
   bool pushed    = false;
   CUresult error = CUDA_SUCCESS;
   try
@@ -670,6 +847,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
     CUdevice cu_device;
     check(cuCtxGetDevice(&cu_device));
 
+fflush(stderr); printf("\nLOOOK cccl_device_reduce Invoke CALL %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     Invoke(
       d_temp_storage,
       *temp_storage_bytes,
@@ -684,11 +862,12 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
       build.reduction_kernel,
       cu_device,
       stream);
+fflush(stderr); printf("\nLOOOK cccl_device_reduce Invoke DONE %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   }
   catch (...)
   {
     error = CUDA_ERROR_UNKNOWN;
-fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) error, __FILE__, __LINE__); fflush(stdout);
+fflush(stderr); printf("\nLOOOK CATCH error=%ld  %s:%d\n", (long) error, __FILE__, __LINE__); fflush(stdout);
   }
 
   if (pushed)
@@ -697,6 +876,7 @@ fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) error, __FILE__, __L
     cuCtxPopCurrent(&dummy);
   }
 
+fflush(stderr); printf("\nLOOOK cccl_device_reduce RETURN %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   return error;
 }
 
@@ -714,7 +894,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_cleanup(cccl_device_reduce_bui
   }
   catch (...)
   {
-fflush(stderr); printf("\nLOOOK error=%ld  %s:%d\n", (long) CUDA_ERROR_UNKNOWN, __FILE__, __LINE__); fflush(stdout);
+fflush(stderr); printf("\nLOOOK CATCH error=%ld  %s:%d\n", (long) CUDA_ERROR_UNKNOWN, __FILE__, __LINE__); fflush(stdout);
     return CUDA_ERROR_UNKNOWN;
   }
 

@@ -108,14 +108,17 @@ def test_itertools_count():
     assert it.dereference() == 37
 
 
-def NOtest_device_sum_repeat_1_equals_num_items(num_items=10):
+def test_device_sum_repeat_1_equals_num_items(num_items=10):
     def add_op(a, b):
         return a + b
 
     dtype = numpy.int32
 
-    h_input = numpy.array([1] * num_items, dtype)
-    d_input = cudax_itertools.repeat(1)
+    if 1:
+        h_input = numpy.array([1] * num_items, dtype)
+        d_input = cuda.to_device(h_input)
+    else:
+        d_input = cudax_itertools.repeat(1)
 
     d_output = cuda.device_array(1, dtype) # to store device sum
 
