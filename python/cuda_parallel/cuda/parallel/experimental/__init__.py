@@ -105,11 +105,12 @@ def _type_to_info(numpy_type):
 
 def _device_array_to_pointer(array):
     dtype = getattr(array, "dtype", None)
-    if dtype is not None:
-        info = _type_to_info(dtype)
-        return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.POINTER, _CCCLOp(), _CCCLOp(), info, array.device_ctypes_pointer.value)
-    else:
-        return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.ITERATOR, _CCCLOp(), _CCCLOp(), _TypeInfo(), 0)
+    info = _type_to_info(dtype)
+    return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.POINTER, _CCCLOp(), _CCCLOp(), info, array.device_ctypes_pointer.value)
+
+
+def _itertools_iter_as_cccl_iter(d_in):
+    return _CCCLIterator(1, 1, _CCCLIteratorKindEnum.ITERATOR, _CCCLOp(), _CCCLOp(), _TypeInfo(), 0)
 
 
 def _host_array_to_value(array):
@@ -235,9 +236,10 @@ class _Reduce:
                 num_items = d_in.size
             else:
                 assert d_in.size == num_items
+            d_in_cccl = _device_array_to_pointer(d_in)
         else:
             assert num_items is not None
-            raise RuntimeError("WIP")
+            d_in_cccl = _itertools_iter_as_cccl_iter(d_in)
         _dtype_validation(self._ctor_d_out_dtype, d_out.dtype)
         _dtype_validation(self._ctor_init_dtype, init.dtype)
         bindings = _get_bindings()
@@ -247,12 +249,11 @@ class _Reduce:
         else:
             temp_storage_bytes = ctypes.c_size_t(temp_storage.nbytes)
             d_temp_storage = temp_storage.device_ctypes_pointer.value
-        d_in_ptr = _device_array_to_pointer(d_in)
         d_out_ptr = _device_array_to_pointer(d_out)
         error = bindings.cccl_device_reduce(self.build_result,
                                             d_temp_storage,
                                             ctypes.byref(temp_storage_bytes),
-                                            d_in_ptr,
+                                            d_in_cccl,
                                             d_out_ptr,
                                             ctypes.c_ulonglong(num_items),
                                             self.op_wrapper.handle(),
