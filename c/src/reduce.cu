@@ -53,7 +53,7 @@ static std::string compile(const std::string& source)
   check(nvrtcDestroyProgram(&prog));
 
 fflush(stderr); printf("\nLOOOK COMPILE RETURN %s:%d\n", __FILE__, __LINE__); fflush(stdout);
-  return std::string(ltoir.release(), ltoir_size);
+  return std::string(ltoir.get(), ltoir_size);
 }
 
 template <class T>
@@ -112,36 +112,9 @@ struct operation_t
   }
 };
 
-template <class OpT>
-struct stateful_operation_t
-{
-  OpT op_state;
-  std::string name;
-  std::string code;
-
-  operator cccl_op_t()
-  {
-    cccl_op_t op;
-    op.type       = cccl_op_kind_t::stateful;
-    op.size       = sizeof(OpT);
-    op.alignment  = alignof(OpT);
-    op.OP_state      = &op_state;
-    op.name       = name.c_str();
-    op.ltoir      = code.c_str();
-    op.ltoir_size = code.size();
-    return op;
-  }
-};
-
 static operation_t make_operation(std::string name, std::string code)
 {
   return operation_t{name, compile(code)};
-}
-
-template <class OpT>
-static stateful_operation_t<OpT> make_operation(std::string name, std::string code, OpT op)
-{
-  return {op, name, compile(code)};
 }
 
 template <class ValueT, class StateT>
@@ -182,8 +155,8 @@ struct constant_iterator_state_t
   T value;
 };
 
-static cccl_iterator_t make_repeat(int32_t value) {
-  c2h_lifted::iterator_t<int32_t, constant_iterator_state_t<int>> input_it = c2h_lifted::make_iterator<int32_t, constant_iterator_state_t<int32_t>>(
+static c2h_lifted::iterator_t<int32_t, constant_iterator_state_t<int32_t>> make_repeat(int32_t value) {
+  c2h_lifted::iterator_t<int32_t, constant_iterator_state_t<int32_t>> input_it = c2h_lifted::make_iterator<int32_t, constant_iterator_state_t<int32_t>>(
     "struct constant_iterator_state_t { int value; };\n",
     {"no_advance",
      "extern \"C\" __device__ void no_advance(constant_iterator_state_t* state, unsigned long long) {\n"
@@ -556,9 +529,12 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
   const char* ctk_path) noexcept
 {
 fflush(stderr); printf("\nLOOOK cccl_device_reduce_build ENTRY %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+
+  c2h_lifted::iterator_t<int32_t, constant_iterator_state_t<int32_t>> make_repeat_result;
   if (input_it.type == cccl_iterator_kind_t::iterator && input_it.IT_state == nullptr) {
 fflush(stderr); printf("\nLOOOK cccl_device_reduce_build IT_state nullptr %s:%d\n", __FILE__, __LINE__); fflush(stdout);
-      input_it = make_repeat(1); // XXX
+      make_repeat_result = make_repeat(1); // MUST KEEP ALIVE b/o .c_str() in operation_t::operator cccl_op_t()
+      input_it = make_repeat_result;
   }
 
 fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
@@ -844,10 +820,14 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
   CUstream stream) noexcept
 {
 fflush(stderr); printf("\nLOOOK cccl_device_reduce ENTRY %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+
+  c2h_lifted::iterator_t<int32_t, constant_iterator_state_t<int32_t>> make_repeat_result;
   if (d_in.type == cccl_iterator_kind_t::iterator && d_in.IT_state == nullptr) {
 fflush(stderr); printf("\nLOOOK cccl_device_reduce IT_state nullptr %s:%d\n", __FILE__, __LINE__); fflush(stdout);
-      d_in = make_repeat(1); // XXX
+      make_repeat_result = make_repeat(1); // MUST KEEP ALIVE b/o .c_str() in operation_t::operator cccl_op_t()
+      d_in = make_repeat_result;
   }
+
   bool pushed    = false;
   CUresult error = CUDA_SUCCESS;
   try
