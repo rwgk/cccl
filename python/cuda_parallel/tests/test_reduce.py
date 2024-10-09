@@ -124,7 +124,7 @@ def test_device_sum_repeat_1_equals_num_items(num_items=10):
 
     h_init = numpy.array([0], dtype) # start device sum with 0
 
-    reduce_into = cudax.reduce_into(d_in=d_output, d_out=d_output, op=add_op, init=h_init)
+    reduce_into = cudax.reduce_into(d_in=d_input, d_out=d_output, op=add_op, init=h_init)
 
     temp_storage_size = reduce_into(None, num_items, d_in=d_input, d_out=d_output, init=h_init)
     d_temp_storage = cuda.device_array(temp_storage_size, dtype=numpy.uint8)

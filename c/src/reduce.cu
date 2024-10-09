@@ -290,12 +290,15 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
 
     // Check for failure to launch
     error = CubDebug(cudaPeekAtLastError());
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
     if (cudaSuccess != error)
     {
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
       break;
     }
   } while (0);
 
+fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   return error;
 }
 
@@ -425,9 +428,7 @@ static cudaError_t Invoke(
 {
 fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   const cccl_type_info accum_t = get_accumulator_type(op, d_in, init); // ONLY USED init
-fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   runtime_tuning_policy policy = get_policy(cc, accum_t, d_in.value_type); // DOES NOT USE d_in.value_type
-fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
 
   // Force kernel code-generation in all compiler passes
   if (num_items <= (policy.block_size * policy.items_per_thread))
@@ -554,6 +555,12 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce_build(
   const char* libcudacxx_path,
   const char* ctk_path) noexcept
 {
+fflush(stderr); printf("\nLOOOK cccl_device_reduce_build ENTRY %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+  if (input_it.type == cccl_iterator_kind_t::iterator && input_it.IT_state == nullptr) {
+fflush(stderr); printf("\nLOOOK cccl_device_reduce_build IT_state nullptr %s:%d\n", __FILE__, __LINE__); fflush(stdout);
+      input_it = make_repeat(1); // XXX
+  }
+
 fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
   CUresult error = CUDA_SUCCESS;
 
@@ -603,6 +610,9 @@ fflush(stderr); printf("\nLOOOK %s:%d\n", __FILE__, __LINE__); fflush(stdout);
             input_it_value_t, // 3
             input_it.dereference.name, // 4
             input_it.advance.name); // 5
+
+fflush(stderr); printf("\nLOOOK %s:%d\nBEGIN\n", __FILE__, __LINE__); fflush(stdout);
+printf("%s\nEND\n", input_iterator_src.c_str()); fflush(stdout);
 
     const std::string output_iterator_src =
       output_it.type == cccl_iterator_kind_t::pointer
@@ -834,7 +844,7 @@ extern "C" CCCL_C_API CUresult cccl_device_reduce(
   CUstream stream) noexcept
 {
 fflush(stderr); printf("\nLOOOK cccl_device_reduce ENTRY %s:%d\n", __FILE__, __LINE__); fflush(stdout);
-  if (d_in.IT_state == nullptr) {
+  if (d_in.type == cccl_iterator_kind_t::iterator && d_in.IT_state == nullptr) {
 fflush(stderr); printf("\nLOOOK cccl_device_reduce IT_state nullptr %s:%d\n", __FILE__, __LINE__); fflush(stdout);
       d_in = make_repeat(1); // XXX
   }

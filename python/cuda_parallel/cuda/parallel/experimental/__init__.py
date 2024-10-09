@@ -201,7 +201,8 @@ def _dtype_validation(dt1, dt2):
 
 class _Reduce:
     def __init__(self, d_in, d_out, op, init):
-        self._ctor_d_in_dtype = d_in.dtype
+        self._ctor_d_in = d_in
+        _, d_in_cccl = self.__handle_d_in(None, d_in)
         self._ctor_d_out_dtype = d_out.dtype
         self._ctor_init_dtype = init.dtype
         cc_major, cc_minor = cuda.get_current_device().compute_capability
@@ -209,13 +210,12 @@ class _Reduce:
         bindings = _get_bindings()
         accum_t = init.dtype
         self.op_wrapper = _Op(accum_t, op)
-        d_in_ptr = _device_array_to_pointer(d_in)
         d_out_ptr = _device_array_to_pointer(d_out)
         self.build_result = _CCCLDeviceReduceBuildResult()
 
         # TODO Figure out caching
         error = bindings.cccl_device_reduce_build(ctypes.byref(self.build_result),
-                                                  d_in_ptr,
+                                                  d_in_cccl,
                                                   d_out_ptr,
                                                   self.op_wrapper.handle(),
                                                   _host_array_to_value(init),
@@ -230,16 +230,8 @@ class _Reduce:
             raise ValueError('Error building reduce')
 
     def __call__(self, temp_storage, num_items, d_in, d_out, init):
-        if hasattr(d_in, "dtype"):
-            _dtype_validation(self._ctor_d_in_dtype, d_in.dtype)
-            if num_items is None:
-                num_items = d_in.size
-            else:
-                assert d_in.size == num_items
-            d_in_cccl = _device_array_to_pointer(d_in)
-        else:
-            assert num_items is not None
-            d_in_cccl = _itertools_iter_as_cccl_iter(d_in)
+        num_items, d_in_cccl = self.__handle_d_in(num_items, d_in)
+        assert num_items is not None
         _dtype_validation(self._ctor_d_out_dtype, d_out.dtype)
         _dtype_validation(self._ctor_init_dtype, init.dtype)
         bindings = _get_bindings()
@@ -267,6 +259,18 @@ class _Reduce:
     def __del__(self):
         bindings = _get_bindings()
         bindings.cccl_device_reduce_cleanup(ctypes.byref(self.build_result))
+
+    def __handle_d_in(self, num_items, d_in):
+        if hasattr(d_in, "dtype"):
+            assert hasattr(self._ctor_d_in, "dtype")
+            _dtype_validation(self._ctor_d_in.dtype, d_in.dtype)
+            if num_items is None:
+                num_items = d_in.size
+            else:
+                assert d_in.size == num_items
+            return num_items, _device_array_to_pointer(d_in)
+        assert not hasattr(self._ctor_d_in, "dtype")
+        return num_items, _itertools_iter_as_cccl_iter(d_in)
 
 
 # TODO Figure out iterators
