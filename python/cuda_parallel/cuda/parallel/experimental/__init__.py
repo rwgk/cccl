@@ -228,9 +228,16 @@ class _Reduce:
         if error != enums.CUDA_SUCCESS:
             raise ValueError('Error building reduce')
 
-    def __call__(self, temp_storage, d_in, d_out, init):
-        # TODO validate POINTER vs ITERATOR when iterator support is added
-        _dtype_validation(self._ctor_d_in_dtype, d_in.dtype)
+    def __call__(self, temp_storage, num_items, d_in, d_out, init):
+        if hasattr(d_in, "dtype"):
+            _dtype_validation(self._ctor_d_in_dtype, d_in.dtype)
+            if num_items is None:
+                num_items = d_in.size
+            else:
+                assert d_in.size == num_items
+        else:
+            assert num_items is not None
+            raise RuntimeError("WIP")
         _dtype_validation(self._ctor_d_out_dtype, d_out.dtype)
         _dtype_validation(self._ctor_init_dtype, init.dtype)
         bindings = _get_bindings()
@@ -242,13 +249,12 @@ class _Reduce:
             d_temp_storage = temp_storage.device_ctypes_pointer.value
         d_in_ptr = _device_array_to_pointer(d_in)
         d_out_ptr = _device_array_to_pointer(d_out)
-        num_items = ctypes.c_ulonglong(d_in.size)
         error = bindings.cccl_device_reduce(self.build_result,
                                             d_temp_storage,
                                             ctypes.byref(temp_storage_bytes),
                                             d_in_ptr,
                                             d_out_ptr,
-                                            num_items,
+                                            ctypes.c_ulonglong(num_items),
                                             self.op_wrapper.handle(),
                                             _host_array_to_value(init),
                                             None)
