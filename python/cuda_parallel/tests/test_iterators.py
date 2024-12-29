@@ -76,7 +76,7 @@ def test_equality_transform_iterator():
     assert it1.kind == it2.kind == it4.kind
 
     ary1 = cp.asarray([0, 1, 2])
-    ary2 = cp.asarray([3, 4, 5])
+    ary2 = cp.asarray([0, 1, 2])
     it5 = TransformIterator(ary1, op1)
     it6 = TransformIterator(ary1, op1)
     it7 = TransformIterator(ary1, op2)
@@ -93,4 +93,4 @@ def test_equality_transform_iterator():
 
 
 def test_different_iterator_types_equality():
-    assert CountingIterator(np.int32(0)) != ConstantIterator(np.int64(0))
+    assert CountingIterator(np.int32(0)) != ConstantIterator(np.int32(0))
